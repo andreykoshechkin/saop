@@ -1,0 +1,82 @@
+#1 Конфигурация Web Service (WebServiceConfig.java):
+@EnableWs // Включает поддержку веб-сервисов в Spring
+@Configuration
+public class WebServiceConfig extends WsConfigurerAdapter {
+
+    // Определяет XSD схему для вашего веб-сервиса
+    @Bean
+    public XsdSchema countriesSchema() {
+        return new SimpleXsdSchema(new ClassPathResource("countries.xsd"));
+    }
+
+    // Определяет WSDL (Web Services Description Language) для вашего веб-сервиса
+    @Bean
+    public DefaultWsdl11Definition defaultWsdl11Definition(XsdSchema countriesSchema) {
+        DefaultWsdl11Definition wsdl11Definition = new DefaultWsdl11Definition();
+        wsdl11Definition.setPortTypeName("CountriesPort"); // Устанавливает имя порта
+        wsdl11Definition.setLocationUri("/ws"); // Устанавливает URI для местоположения веб-сервиса
+        wsdl11Definition.setTargetNamespace("http://example.com/countries"); // Устанавливает пространство имен
+        wsdl11Definition.setSchema(countriesSchema); // Устанавливает XSD схему
+        return wsdl11Definition;
+    }
+}
+#2 XSD схема (countries.xsd):
+<!-- Определяет XSD схему для входящих и исходящих сообщений -->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns="http://example.com/countries"
+           targetNamespace="http://example.com/countries"
+           elementFormDefault="qualified">
+
+    <!-- Элемент запроса -->
+    <xs:element name="getCountryRequest">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="name" type="xs:string"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+    <!-- Элемент ответа -->
+    <xs:element name="getCountryResponse">
+        <xs:complexType>
+            <xs:sequence>
+                <xs:element name="country" type="xs:string"/>
+            </xs:sequence>
+        </xs:complexType>
+    </xs:element>
+
+</xs:schema>
+#3 Сервис
+
+@Service
+public class CountryService {
+
+    // Обработка запроса и возврат ответа
+    public GetCountryResponse getCountry(GetCountryRequest request) {
+        GetCountryResponse response = new GetCountryResponse();
+        response.setCountry("USA"); // Пример: возвращает страну по запросу
+        return response;
+    }
+}
+#№4 Контроллер (CountryEndpoint.java):
+
+@Endpoint
+public class CountryEndpoint {
+
+    private static final String NAMESPACE_URI = "http://example.com/countries";
+
+    private final CountryService countryService;
+
+    @Autowired
+    public CountryEndpoint(CountryService countryService) {
+        this.countryService = countryService;
+    }
+
+    // Аннотация PayloadRoot указывает, что метод должен быть вызван при получении запроса с определенным корневым элементом
+    @PayloadRoot(namespace = NAMESPACE_URI, localPart = "getCountryRequest")
+    @ResponsePayload // Аннотация указывает, что метод должен вернуть содержимое ответа
+    public GetCountryResponse getCountry(@RequestPayload GetCountryRequest request) {
+        return countryService.getCountry(request); // Вызов сервиса для обработки запроса
+    }
+}
+
